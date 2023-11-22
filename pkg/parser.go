@@ -19,7 +19,7 @@ type IParser interface {
 	GetMate() *map[string]string
 	GetReplyTo() string
 	GetFrom() string
-	GetAttachments() *[]AttachmentRaw
+	GetAttachments() []*AttachmentRaw
 }
 
 func GetSendGridParser(request *http.Request) (IParser, error) {
