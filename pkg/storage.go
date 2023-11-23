@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"email2db/pkg/storage"
 	"errors"
 	"io"
 )
@@ -15,7 +14,7 @@ type S3Config struct {
 }
 
 type StorageConfig struct {
-	S3  S3Config `json:"s3"`
+	S3  *S3Config `json:"s3"`
 }
 
 type UploadOptions struct {
@@ -30,12 +29,12 @@ type IStorage interface {
 
 func GetStorage(conf *StorageConfig) (IStorage, error) {
 	if len(conf.S3.AccessKey) > 0 {
-		disk, err := storage.NewS3Storage(&conf.S3)
+		disk, err := NewS3Storage(conf.S3)
 		if err != nil {
 			Log.Error(err)
 			return nil, err
 		}
 		return disk, nil
 	}
-	return nil, errors.New("storage configuration not found")
+	return nil, errors.New("storages configuration not found")
 }

@@ -61,14 +61,14 @@ func (this MetaObject) GormValue(ctx context.Context, db *gorm.DB) clause.Expr {
 }
 
 type MailModel struct {
-	ID        uint `gorm:"primaryKey" json:"id"`
-	Subject   string `gorm:"column:subject" json:"subject"`
-	From      string `gorm:"column:from" json:"from"`
-	ReplyTo   string `gorm:"column:reply_to" json:"reply_to"`
-	To        ToList `gorm:"column:to" gorm:"type:json" json:"to"`
+	ID        uint       `gorm:"primaryKey" json:"id"`
+	Subject   string     `gorm:"column:subject" json:"subject"`
+	From      string     `gorm:"column:from" json:"from"`
+	ReplyTo   string     `gorm:"column:reply_to" json:"reply_to"`
+	To        ToList     `gorm:"column:to" gorm:"type:json" json:"to"`
 	Meta      MetaObject `gorm:"column:meta" gorm:"type:json" json:"meta"`
-	CreatedAt time.Time `gorm:"column:created_at" gorm:"type:datetime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at" gorm:"type:datetime" json:"updated_at"`
+	CreatedAt time.Time  `gorm:"column:created_at" gorm:"type:datetime" json:"created_at"`
+	UpdatedAt time.Time  `gorm:"column:updated_at" gorm:"type:datetime" json:"updated_at"`
 }
 
 func (MailModel) TableName() string {
@@ -76,11 +76,12 @@ func (MailModel) TableName() string {
 }
 
 type AttachmentModel struct {
-	ID        uint `gorm:"primaryKey" json:"id"`
-	Name   string `gorm:"column:name" json:"name"`
-	Path      string `gorm:"column:path" json:"path"`
-	ContentID   string `gorm:"column:content-id" json:"content-id"`
-	MimeType   string `gorm:"column:mime_type" json:"mime_type"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Name      string    `gorm:"column:name" json:"name"`
+	Path      string    `gorm:"column:path" json:"path"`
+	ContentID string    `gorm:"column:content-id" json:"content-id"`
+	EmailID   uint      `gorm:"column:email_id" json:"email_id"`
+	MimeType  string    `gorm:"column:mime_type" json:"mime_type"`
 	CreatedAt time.Time `gorm:"column:created_at" gorm:"type:datetime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at" gorm:"type:datetime" json:"updated_at"`
 }
@@ -101,7 +102,7 @@ type DBHelper struct {
 func GetDBHelper(config *DBConfig) (IDBHelper, error) {
 	if len(config.MySQL.DSN) > 0 {
 		connection, err := gorm.Open(mysql.New(mysql.Config{
-			DSN: config.MySQL.DSN,
+			DSN:                       config.MySQL.DSN,
 			SkipInitializeWithVersion: false,
 		}), &gorm.Config{})
 		if err != nil {
@@ -109,7 +110,7 @@ func GetDBHelper(config *DBConfig) (IDBHelper, error) {
 		}
 		return &DBHelper{connection}, nil
 	}
- 	return nil, errors.New("database config not found")
+	return nil, errors.New("database config not found")
 }
 
 func (this *DBHelper) SaveMail(target *MailModel) (uint, error) {

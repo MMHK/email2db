@@ -15,7 +15,12 @@ func loadConfig() (*Config, error) {
 
 func Test_SaveConfig(t *testing.T) {
 
-	conf := &Config{}
+	conf := &Config{
+		Storage: &StorageConfig{},
+		DB: &DBConfig{
+			MySQL: &MySQLConfig{},
+		},
+	}
 	configPath := tests.GetLocalPath("../config.json")
 	err := conf.Save(configPath)
 	if err != nil {

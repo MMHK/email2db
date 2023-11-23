@@ -1,24 +1,34 @@
-package parser
+package pkg
 
 import (
 	"bytes"
-	"email2db/pkg"
-	"golang.org/x/net/html/charset"
 	"encoding/json"
+	"golang.org/x/net/html/charset"
 	"io/ioutil"
 	"net/http"
+	"net/mail"
+	"strings"
 )
 
 const CHARSET_UTF8 = "UTF-8"
 
 type SendGridParser struct {
-	subjectDistChatSet string
-	htmlDistChatSet    string
-	textDistChatSet    string
-	toDistChatSet      string
-	fromDistChatSet    string
-	ccDistChatSet      string
-	rawBody            map[string]string
+	subjectDistChatSet  string
+	htmlDistChatSet     string
+	textDistChatSet     string
+	toDistChatSet       string
+	fromDistChatSet     string
+	ccDistChatSet       string
+	filenameDistChatSet string
+	rawBody             map[string]string
+	contacts            *ContactList
+	attachments         []*AttachmentRaw
+}
+
+type ContactList struct {
+	To   []*mail.Address
+	From *mail.Address
+	CC   []*mail.Address
 }
 
 func ConvertCharset(encoderName string, src string) (string, error) {
@@ -30,18 +40,18 @@ func ConvertCharset(encoderName string, src string) (string, error) {
 	if err != nil {
 		return src, err
 	}
-	bytes, err := ioutil.ReadAll(out)
+	bin, err := ioutil.ReadAll(out)
 	if err != nil {
 		return src, err
 	}
-	return string(bytes), nil
+	return string(bin), nil
 }
 
-func (s *SendGridParser) Parse(request *http.Request) (pkg.IParser, error) {
+func (s *SendGridParser) Parse(request *http.Request) (IParser, error) {
 	// 解析多部分表單，10 << 20 指定最大 10 MB
 	err := request.ParseMultipartForm(10 << 20)
 	if err != nil {
-		pkg.Log.Error(err)
+		Log.Error(err)
 		return nil, err
 	}
 	//parse form data
@@ -52,10 +62,8 @@ func (s *SendGridParser) Parse(request *http.Request) (pkg.IParser, error) {
 		}
 	}
 	s.parseMeta()
-	if err != nil {
-		pkg.Log.Error(err)
-		return nil, err
-	}
+	s.parseContacts()
+	s.parseAttachments(request)
 
 	return s, nil
 }
@@ -68,13 +76,14 @@ func (s *SendGridParser) parseMeta() {
 	s.toDistChatSet = CHARSET_UTF8
 	s.fromDistChatSet = CHARSET_UTF8
 	s.ccDistChatSet = CHARSET_UTF8
+	s.filenameDistChatSet = CHARSET_UTF8
 
 	charsetsConfig := map[string]string{}
 	charsetsJSONStr, ok := s.rawBody["charsets"]
 	if ok {
 		err := json.Unmarshal([]byte(charsetsJSONStr), &charsetsConfig)
 		if err != nil {
-			pkg.Log.Error(err)
+			Log.Error(err)
 		}
 	}
 
@@ -98,6 +107,9 @@ func (s *SendGridParser) parseMeta() {
 		case "text":
 			s.textDistChatSet = value
 			break
+		case "filename":
+			s.filenameDistChatSet = value
+			break
 		}
 	}
 
@@ -106,7 +118,7 @@ func (s *SendGridParser) parseMeta() {
 	if ok {
 		html, err := ConvertCharset(s.htmlDistChatSet, html)
 		if err != nil {
-			pkg.Log.Error(err)
+			Log.Error(err)
 		}
 		s.rawBody["html"] = html
 	}
@@ -115,7 +127,7 @@ func (s *SendGridParser) parseMeta() {
 	if ok && s.textDistChatSet != CHARSET_UTF8 {
 		text, err := ConvertCharset(s.textDistChatSet, text)
 		if err != nil {
-			pkg.Log.Error(err)
+			Log.Error(err)
 		}
 		s.rawBody["text"] = text
 	}
@@ -124,7 +136,7 @@ func (s *SendGridParser) parseMeta() {
 	if ok && s.toDistChatSet != CHARSET_UTF8 {
 		to, err := ConvertCharset(s.toDistChatSet, to)
 		if err != nil {
-			pkg.Log.Error(err)
+			Log.Error(err)
 		}
 		s.rawBody["to"] = to
 	}
@@ -133,7 +145,7 @@ func (s *SendGridParser) parseMeta() {
 	if ok && s.fromDistChatSet != CHARSET_UTF8 {
 		from, err := ConvertCharset(s.fromDistChatSet, from)
 		if err != nil {
-			pkg.Log.Error(err)
+			Log.Error(err)
 		}
 		s.rawBody["from"] = from
 	}
@@ -142,7 +154,7 @@ func (s *SendGridParser) parseMeta() {
 	if ok && s.subjectDistChatSet != CHARSET_UTF8 {
 		subject, err := ConvertCharset(s.subjectDistChatSet, subject)
 		if err != nil {
-			pkg.Log.Error(err)
+			Log.Error(err)
 		}
 		s.rawBody["subject"] = subject
 	}
@@ -151,9 +163,87 @@ func (s *SendGridParser) parseMeta() {
 	if ok && s.ccDistChatSet != CHARSET_UTF8 {
 		cc, err := ConvertCharset(s.ccDistChatSet, cc)
 		if err != nil {
-			pkg.Log.Error(err)
+			Log.Error(err)
 		}
 		s.rawBody["cc"] = cc
+	}
+}
+
+func (s *SendGridParser) parseContacts() {
+	s.contacts = &ContactList{
+		To:   []*mail.Address{},
+		CC:   []*mail.Address{},
+		From: nil,
+	}
+	fromStr, ok := s.rawBody["from"]
+	if ok {
+		from, err := mail.ParseAddress(fromStr)
+		if err != nil {
+			Log.Error(err)
+		} else {
+			s.contacts.From = from
+		}
+	}
+
+	ccStr, ok := s.rawBody["cc"]
+	if ok {
+		cc, err := mail.ParseAddressList(ccStr)
+		if err != nil {
+			Log.Error(err)
+		} else {
+			s.contacts.CC = cc
+		}
+	}
+
+	toStr, ok := s.rawBody["to"]
+	if ok {
+		to, err := mail.ParseAddressList(toStr)
+		if err != nil {
+			Log.Error(err)
+		} else {
+			s.contacts.To = to
+		}
+	}
+}
+
+func (s *SendGridParser) parseAttachments(request *http.Request) {
+	s.attachments = []*AttachmentRaw{}
+
+	contentIDMappings := map[string]string{}
+	contentIdsStr, ok := s.rawBody["content-ids"]
+	if ok {
+		err := json.Unmarshal([]byte(contentIdsStr), &contentIDMappings)
+		if err != nil {
+			Log.Error(err)
+		}
+	}
+
+	for fieldName, fileList := range request.MultipartForm.File {
+		for _, header := range fileList {
+			filename, err := ConvertCharset(s.filenameDistChatSet, header.Filename)
+			if err != nil {
+				Log.Error(err)
+				continue
+			}
+			reader, err := header.Open()
+			if err != nil {
+				Log.Error(err)
+				continue
+			}
+			mimeType := header.Header.Get("Content-Type")
+			contentID := ""
+			for k, v := range contentIDMappings {
+				if strings.EqualFold(v, fieldName) {
+					contentID = k
+				}
+			}
+			s.attachments = append(s.attachments, &AttachmentRaw{
+				FileName:  filename,
+				MimeType:  mimeType,
+				File:      reader,
+				ContentID: contentID,
+			})
+		}
 	}
 }
 
@@ -166,24 +256,28 @@ func (s *SendGridParser) GetSubject() string {
 	return subject
 }
 
-func (s *SendGridParser) GetToList() *[]string {
-	panic("implement me")
+func (s *SendGridParser) GetToList() []string {
+	out := []string{}
+
+	for _, to := range s.contacts.To {
+		out = append(out, to.Address)
+	}
+
+	return out
 }
 
-func (s *SendGridParser) GetMate() *map[string]string {
-	return &s.rawBody
-}
-
-func (s *SendGridParser) GetReplyTo() string {
-	panic("implement me")
+func (s *SendGridParser) GetMate() map[string]string {
+	return s.rawBody
 }
 
 func (s *SendGridParser) GetFrom() string {
-	panic("implement me")
+	if s.contacts.From != nil {
+		return s.contacts.From.Address
+	}
+
+	return ""
 }
 
-func (s *SendGridParser) GetAttachments() []*pkg.AttachmentRaw {
-	panic("implement me")
+func (s *SendGridParser) GetAttachments() []*AttachmentRaw {
+	return s.attachments
 }
-
-

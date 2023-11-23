@@ -1,7 +1,6 @@
-package storage
+package pkg
 
 import (
-	"email2db/pkg"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -14,17 +13,17 @@ import (
 )
 
 type S3Storage struct {
-	Conf    *pkg.S3Config
+	Conf    *S3Config
 	session *session.Session
 }
 
-func NewS3Storage(conf *pkg.S3Config) (pkg.IStorage, error) {
+func NewS3Storage(conf *S3Config) (IStorage, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:      aws.String(conf.Region),
 		Credentials: credentials.NewStaticCredentials(conf.AccessKey, conf.SecretKey, ""),
 	})
 	if err != nil {
-		pkg.Log.Error(err)
+		Log.Error(err)
 		return nil, err
 	}
 
@@ -56,11 +55,11 @@ func (this *S3Storage) Upload(localPath string, Key string) (path string, url st
 	return path, info.Location, err
 }
 
-func (this *S3Storage) PutContent(content string, Key string, opt *pkg.UploadOptions) (path string, url string, err error) {
+func (this *S3Storage) PutContent(content string, Key string, opt *UploadOptions) (path string, url string, err error) {
 	return this.PutStream(strings.NewReader(content), Key, opt)
 }
 
-func (this *S3Storage) PutStream(reader io.Reader, Key string, opt *pkg.UploadOptions) (path string, url string, err error) {
+func (this *S3Storage) PutStream(reader io.Reader, Key string, opt *UploadOptions) (path string, url string, err error) {
 	uploader := s3manager.NewUploader(this.session)
 
 	contentType := "application/octet-stream"
@@ -79,7 +78,7 @@ func (this *S3Storage) PutStream(reader io.Reader, Key string, opt *pkg.UploadOp
 	})
 
 	if err != nil {
-		pkg.Log.Error(err)
+		Log.Error(err)
 		return path, "", err
 	}
 

@@ -6,9 +6,8 @@ import (
 )
 
 type Config struct {
-	Listen  string         `json:"listen"`
-	WebRoot string         `json:"web_root"`
-	Storage *StorageConfig `json:"storage"`
+	HttpConfig
+	Storage *StorageConfig `json:"storages"`
 	DB      *DBConfig      `json:"db"`
 	TempDir string         `json:"tmp_path"`
 }

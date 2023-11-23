@@ -1,7 +1,6 @@
-package storage
+package pkg
 
 import (
-	"email2db/pkg"
 	"email2db/tests"
 	"fmt"
 	"mime"
@@ -10,8 +9,8 @@ import (
 	"testing"
 )
 
-func loadS3Config() *pkg.S3Config {
-	return &pkg.S3Config{
+func loadS3Config() *S3Config {
+	return &S3Config{
 		AccessKey: os.Getenv("S3_KEY"),
 		SecretKey: os.Getenv("S3_SECRET"),
 		Bucket: os.Getenv("S3_BUCKET"),
@@ -20,7 +19,7 @@ func loadS3Config() *pkg.S3Config {
 	}
 }
 
-func getStorage(t *testing.T) pkg.IStorage {
+func getStorage(t *testing.T) IStorage {
 	s3, err := NewS3Storage(loadS3Config())
 
 	if err != nil {
@@ -44,9 +43,9 @@ func TestPutStream(t *testing.T) {
 	}
 	defer file.Close()
 
-	distPath := fmt.Sprintf("%s%s", pkg.MakeUUID(), filepath.Ext(filename))
+	distPath := fmt.Sprintf("%s%s", MakeUUID(), filepath.Ext(filename))
 
-	path, url, err := disk.PutStream(file, distPath, &pkg.UploadOptions{
+	path, url, err := disk.PutStream(file, distPath, &UploadOptions{
 		ContentType: mime.TypeByExtension(filename),
 	})
 
