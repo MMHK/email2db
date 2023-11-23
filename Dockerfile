@@ -14,7 +14,8 @@ RUN go version \
  && export GO111MODULE=on \
  && export GOPROXY=https://goproxy.io \
  && go mod vendor \
- && CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o email2db
+ && CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o email2db \
+ && chmod +x email2db
 
 ######## Start a new stage from scratch #######
 FROM alpine:latest  

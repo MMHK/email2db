@@ -1,4 +1,4 @@
-package email2db
+package main
 
 import (
 	"email2db/pkg"
