@@ -1,19 +1,5 @@
 {
-    "listen": "",
-    "web_root": "",
-    "storages": {
-        "s3": {
-            "access_key": "",
-            "secret_key": "",
-            "bucket": "",
-            "region": "",
-            "prefix": ""
-        }
-    },
-    "db": {
-        "mysql": {
-            "dsn": ""
-        }
-    },
-    "tmp_path": ""
+    "listen": "${HTTP_LIST}",
+    "web_root": "${WEB_ROOT}",
+    "tmp_path": "/tmp"
 }

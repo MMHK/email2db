@@ -21,6 +21,27 @@ func NewConfigFromLocal(filename string) (*Config, error) {
 	return conf, err
 }
 
+func (this *Config) MarginWithENV()  {
+	if this.Storage == nil {
+		this.Storage = &StorageConfig{
+			S3: LoadS3ConfigWithEnv(),
+		}
+	}
+	if this.DB == nil {
+		this.DB = &DBConfig{
+			MySQL: &MySQLConfig{
+				DSN: LoadMySQLDSNWithENV(),
+			},
+		}
+	}
+	if len(this.WebRoot) <= 0 {
+		this.WebRoot = os.Getenv("WEB_ROOT")
+	}
+	if len(this.Listen) <= 0 {
+		this.Listen = os.Getenv("HTTP_LIST")
+	}
+}
+
 func (c *Config) load(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {

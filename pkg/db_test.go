@@ -11,11 +11,11 @@ import (
 )
 
 func loadMySQLDSN() string {
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	dbname := os.Getenv("DB_DATABASE")
-	username := os.Getenv("DB_USERNAME")
-	pwd := os.Getenv("DB_PASSWORD")
+	host := os.Getenv("MYSQL_HOST")
+	port := os.Getenv("MYSQL_PORT")
+	dbname := os.Getenv("MYSQL_DATABASE")
+	username := os.Getenv("MYSQL_USERNAME")
+	pwd := os.Getenv("MYSQL_PASSWORD")
 	tz := os.Getenv("TZ")
 
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=%s",

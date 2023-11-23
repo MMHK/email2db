@@ -1,0 +1,21 @@
+version: "3"
+services:
+  email2db:
+    image: "mmhk/email2db:latest"
+    restart: always
+    environment:
+      - S3_KEY=
+      - S3_SECRET=
+      - S3_REGION=ap-southeast-1
+      - S3_BUCKET=s3.test.mixmedia.com
+      - S3_PREFIX=email2db
+      - MYSQL_HOST=
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=email2db
+      - MYSQL_USERNAME=
+      - MYSQL_PASSWORD=
+      - TZ=Asia/Hong_Kong
+      - HTTP_LIST=127.0.0.1:8843
+      - WEB_ROOT=/app/email2db
+    ports:
+      - "8843:8843"

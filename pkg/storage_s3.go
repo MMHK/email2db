@@ -17,6 +17,22 @@ type S3Storage struct {
 	session *session.Session
 }
 
+func LoadS3ConfigWithEnv() *S3Config {
+	remotePathPrefix := "email2db"
+	prefix := os.Getenv("S3_PREFIX")
+	if len(prefix) > 0 {
+		remotePathPrefix = prefix
+	}
+
+	return &S3Config{
+		AccessKey: os.Getenv("S3_KEY"),
+		SecretKey: os.Getenv("S3_SECRET"),
+		Bucket: os.Getenv("S3_BUCKET"),
+		Region: os.Getenv("S3_REGION"),
+		PrefixPath: remotePathPrefix,
+	}
+}
+
 func NewS3Storage(conf *S3Config) (IStorage, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:      aws.String(conf.Region),
@@ -33,7 +49,7 @@ func NewS3Storage(conf *S3Config) (IStorage, error) {
 	}, nil
 }
 
-func (this *S3Storage) Upload(localPath string, Key string) (path string, url string, err error) {
+func (this *S3Storage) Upload(localPath string, Key string, opt *UploadOptions) (path string, url string, err error) {
 	file, err := os.Open(localPath)
 	if err != nil {
 		return "", "", err
@@ -44,11 +60,16 @@ func (this *S3Storage) Upload(localPath string, Key string) (path string, url st
 	uploader := s3manager.NewUploader(this.session)
 	path = filepath.ToSlash(filepath.Join(this.Conf.PrefixPath, Key))
 
+	var publicflag *string
+	if opt.PublicRead {
+		publicflag = aws.String("public-read")
+	}
+
 	info, err := uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(this.Conf.Bucket),
-		Key:    aws.String(path),
-		Body:   file,
-		ACL:    aws.String("public-read"),
+		Bucket:      aws.String(this.Conf.Bucket),
+		Key:         aws.String(path),
+		Body:        file,
+		ACL:         publicflag,
 		ContentType: aws.String(mime.TypeByExtension(localPath)),
 	})
 
@@ -69,11 +90,16 @@ func (this *S3Storage) PutStream(reader io.Reader, Key string, opt *UploadOption
 
 	path = filepath.ToSlash(filepath.Join(this.Conf.PrefixPath, Key))
 
+	var publicflag *string
+	if opt.PublicRead {
+		publicflag = aws.String("public-read")
+	}
+
 	info, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket:      aws.String(this.Conf.Bucket),
 		Key:         aws.String(path),
 		Body:        reader,
-		ACL:         aws.String("public-read"),
+		ACL:         publicflag,
 		ContentType: aws.String(contentType),
 	})
 

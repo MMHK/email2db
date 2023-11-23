@@ -10,12 +10,18 @@ import (
 )
 
 func loadS3Config() *S3Config {
+	remotePathPrefix := "email2db"
+	prefix := os.Getenv("S3_PREFIX")
+	if len(prefix) > 0 {
+		remotePathPrefix = prefix
+	}
+
 	return &S3Config{
 		AccessKey: os.Getenv("S3_KEY"),
 		SecretKey: os.Getenv("S3_SECRET"),
 		Bucket: os.Getenv("S3_BUCKET"),
 		Region: os.Getenv("S3_REGION"),
-		PrefixPath: "email2db",
+		PrefixPath: remotePathPrefix,
 	}
 }
 

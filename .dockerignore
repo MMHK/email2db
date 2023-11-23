@@ -1,0 +1,9 @@
+vendor
+.git
+.idea
+tests/swagger
+tests/*.exe
+tests/*.ini
+tests/*.jpeg
+*.md
+.env

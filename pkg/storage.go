@@ -19,10 +19,11 @@ type StorageConfig struct {
 
 type UploadOptions struct {
 	ContentType string
+	PublicRead bool
 }
 
 type IStorage interface {
-	Upload(localPath string, Key string) (string, string, error)
+	Upload(localPath string, Key string, opt *UploadOptions) (string, string, error)
 	PutContent(content string, Key string, opt *UploadOptions) (string, string, error)
 	PutStream(reader io.Reader, Key string, opt *UploadOptions) (string, string, error)
 }

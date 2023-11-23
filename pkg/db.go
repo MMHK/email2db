@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"net/url"
+	"os"
 	"time"
 )
 
@@ -16,6 +19,21 @@ type MySQLConfig struct {
 
 type DBConfig struct {
 	MySQL *MySQLConfig `json:"mysql"`
+}
+
+func LoadMySQLDSNWithENV() string {
+	host := os.Getenv("MYSQL_HOST")
+	port := os.Getenv("MYSQL_PORT")
+	dbname := os.Getenv("MYSQL_DATABASE")
+	username := os.Getenv("MYSQL_USERNAME")
+	pwd := os.Getenv("MYSQL_PASSWORD")
+	tz := os.Getenv("TZ")
+
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=%s",
+		url.PathEscape(username),
+		url.PathEscape(pwd),
+		host, port, url.PathEscape(dbname),
+		url.QueryEscape(tz))
 }
 
 type ToList []string
