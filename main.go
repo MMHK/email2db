@@ -15,10 +15,13 @@ func main() {
 	conf, err := pkg.NewConfigFromLocal(*conf_path)
 	if err != nil {
 		pkg.Log.Error(err)
-
-		conf := &pkg.Config{}
-		conf.MarginWithENV()
+		conf = &pkg.Config{}
 	}
+
+	conf.MarginWithENV()
+
+	pkg.Log.Debug("show config detail:")
+	pkg.Log.Debug(conf.ToJSON())
 
 	service := pkg.NewHttpService(conf)
 	service.Start()

@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 )
@@ -22,12 +23,13 @@ func NewConfigFromLocal(filename string) (*Config, error) {
 }
 
 func (this *Config) MarginWithENV()  {
-	if this.Storage == nil {
+	if this.Storage == nil || this.Storage.S3 == nil {
 		this.Storage = &StorageConfig{
 			S3: LoadS3ConfigWithEnv(),
 		}
 	}
-	if this.DB == nil {
+
+	if this.DB == nil || this.DB.MySQL == nil || len(this.DB.MySQL.DSN) <= 0 {
 		this.DB = &DBConfig{
 			MySQL: &MySQLConfig{
 				DSN: LoadMySQLDSNWithENV(),
@@ -55,6 +57,16 @@ func (c *Config) load(filename string) error {
 		Log.Error(err)
 	}
 	return err
+}
+
+func (c *Config) ToJSON() (string, error) {
+	jsonBin, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	var str bytes.Buffer
+	_ = json.Indent(&str, jsonBin, "", "  ")
+	return str.String(), nil
 }
 
 func (c *Config) Save(saveAs string) error {

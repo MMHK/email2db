@@ -1,7 +1,9 @@
 package pkg
 
 import (
+	"bytes"
 	"email2db/tests"
+	"encoding/json"
 	"testing"
 )
 
@@ -22,6 +24,29 @@ func TestNewConfigFromLocal(t *testing.T) {
 	}
 
 	t.Logf("%+v", conf)
+	t.Log("PASS")
+}
+
+func TestConfig_MarginWithENV(t *testing.T) {
+	conf, err := NewConfigFromLocal(tests.GetLocalPath("../config.json"))
+	if err != nil {
+		t.Error(err)
+
+		conf = &Config{}
+	}
+
+	conf.MarginWithENV()
+
+
+	t.Logf("%+v", conf)
+	jsonBin, err := json.Marshal(conf)
+	if err != nil {
+		t.Error(err)
+	} else {
+		var str bytes.Buffer
+		_ = json.Indent(&str, jsonBin, "", "  ")
+		t.Log(str.String())
+	}
 	t.Log("PASS")
 }
 
