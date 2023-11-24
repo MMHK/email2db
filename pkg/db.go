@@ -42,6 +42,15 @@ func (ToList) GormDataType() string {
 	return "json"
 }
 
+func (this *ToList) Scan(value interface{}) error {
+	bin, ok := value.([]byte)
+	if !ok {
+		this = &ToList{}
+		return nil
+	}
+	return json.Unmarshal(bin, this)
+}
+
 func (this ToList) GormValue(ctx context.Context, db *gorm.DB) clause.Expr {
 	jsonStr := "[]"
 	jsonString, err := json.Marshal(this)
@@ -78,6 +87,10 @@ func (this MetaObject) GormValue(ctx context.Context, db *gorm.DB) clause.Expr {
 	}
 }
 
+type IMailDetail interface {
+	GetAttachments() (*[]AttachmentModel)
+}
+
 type MailModel struct {
 	ID        uint       `gorm:"primaryKey" json:"id"`
 	Subject   string     `gorm:"column:subject" json:"subject"`
@@ -87,10 +100,19 @@ type MailModel struct {
 	Meta      MetaObject `gorm:"column:meta" gorm:"type:json" json:"meta"`
 	CreatedAt time.Time  `gorm:"column:created_at" gorm:"type:datetime" json:"created_at"`
 	UpdatedAt time.Time  `gorm:"column:updated_at" gorm:"type:datetime" json:"updated_at"`
+	Attachments []AttachmentModel `gorm:"foreignKey:EmailID;references:ID;"`
 }
 
 func (MailModel) TableName() string {
 	return "em_email"
+}
+
+func (this *MailModel) GetAttachments() (*[]AttachmentModel) {
+	if this.Attachments == nil {
+		this.Attachments = make([]AttachmentModel, 0)
+	}
+
+	return &this.Attachments
 }
 
 type AttachmentModel struct {
@@ -111,6 +133,9 @@ func (AttachmentModel) TableName() string {
 type IDBHelper interface {
 	SaveMail(target *MailModel) (ID uint, err error)
 	SaveAttachment(target *AttachmentModel) (ID uint, err error)
+	GetMailList(list interface{}, search string, pageSize uint, currentPage uint) (*Pagination, error)
+	GetMailDetail(target IMailDetail, MailID int) (error)
+	GetAttachment(id int) (*AttachmentModel, error)
 }
 
 type DBHelper struct {
@@ -122,7 +147,9 @@ func GetDBHelper(config *DBConfig) (IDBHelper, error) {
 		connection, err := gorm.Open(mysql.New(mysql.Config{
 			DSN:                       config.MySQL.DSN,
 			SkipInitializeWithVersion: false,
-		}), &gorm.Config{})
+		}), &gorm.Config{
+			//Logger: logger.Default.LogMode(logger.Info),
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -145,4 +172,61 @@ func (this *DBHelper) SaveAttachment(target *AttachmentModel) (uint, error) {
 		return 0, result.Error
 	}
 	return target.ID, nil
+}
+
+func (this *DBHelper) GetMailList(list interface{}, search string, pageSize uint, currentPage uint) (*Pagination, error) {
+	tx := this.connection.Model(&MailModel{})
+
+	if len(search) > 0 {
+		s := fmt.Sprintf(`%%%s%%`, search)
+		tx = tx.Where("`subject` LIKE ? OR `from` LIKE ? OR `to` LIKE ?", s, s, s)
+	}
+
+	var counter int64 = 0
+	err := tx.Count(&counter).Error
+	if err != nil {
+		Log.Error(err)
+		return nil, err
+	}
+	if counter < 0 {
+		counter = 0
+	}
+	pager := NewPagination(uint(counter), currentPage, pageSize)
+	tx = tx.Limit(int(pageSize)).Offset(int((pager.CurrentPage() - 1) * pageSize)).Order("`id` desc")
+
+	err = tx.Find(list).Error
+	if err != nil {
+		Log.Error(err)
+		return nil, err
+	}
+	return pager, nil
+}
+
+func (this *DBHelper) GetMailDetail(target IMailDetail, MailID int) (error) {
+	tx := this.connection.Model(&MailModel{}).Where("id = ?", MailID)
+
+	err := tx.First(&target).Error
+	if err != nil {
+		Log.Error(err)
+		return err
+	}
+
+	attachments := target.GetAttachments()
+	err = this.connection.Model(&AttachmentModel{}).Where("email_id=?", MailID).Find(attachments).Error
+	if err != nil {
+		Log.Error(err)
+	}
+	return nil
+}
+
+func (this *DBHelper) GetAttachment(id int) (*AttachmentModel, error) {
+	tx := this.connection.Model(&AttachmentModel{}).Where("id = ?", id)
+
+	target := AttachmentModel{}
+	err := tx.First(&target).Error
+	if err != nil {
+		Log.Error(err)
+		return nil, err
+	}
+	return &target, nil
 }

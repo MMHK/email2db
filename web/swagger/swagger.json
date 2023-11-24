@@ -1,0 +1,418 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Email2DB",
+    "description": "Email to Database Service API",
+    "version": "0.1"
+  },
+  "servers": [
+    {
+      "url": "{scheme}://{endpoint}/",
+      "variables": {
+        "scheme": {
+          "default": "https"
+        },
+        "endpoint": {
+          "default": "email2db.demo2.mixmedia.com"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/webhook/sendgrid": {
+      "post": {
+        "summary": "handle sendgrid inbound mail webhook",
+        "tags": [
+          "Webhook"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "headers": {
+                    "type": "string",
+                    "description": "The raw headers of the email."
+                  },
+                  "dkim": {
+                    "type": "string",
+                    "description": "A string containing the verification results of any DKIM and domain keys signatures in the message."
+                  },
+                  "to": {
+                    "type": "string",
+                    "description": "Email recipient field, as taken from the message headers."
+                  },
+                  "from": {
+                    "type": "string",
+                    "description": "Email sender, as taken from the message headers."
+                  },
+                  "sender_ip": {
+                    "type": "string",
+                    "description": "A string of the sender’s ip address."
+                  },
+                  "spam_report": {
+                    "type": "string",
+                    "description": "Spam Assassin’s spam report."
+                  },
+                  "content-ids": {
+                    "type": "string",
+                    "description": "A string containing the number of attachments."
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "HTML body of email. If not set, email did not have an HTML body."
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "Email body in plaintext formatting."
+                  },
+                  "envelope": {
+                    "type": "string",
+                    "description": "A string containing the SMTP envelope. This will have 2 variables: `to`, which is a single-element array containing the address that we received the email to, and `from`, which is the return path for the message."
+                  },
+                  "attachments": {
+                    "type": "string",
+                    "description": "Number of attachments included in email."
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "Email Subject."
+                  },
+                  "spam_score": {
+                    "type": "string",
+                    "description": "Spam Assassin’s rating for whether or not this is spam."
+                  },
+                  "attachment-info": {
+                    "type": "string",
+                    "description": "A JSON map where the keys are named attachment{X}. Each attachment key points to a JSON object containing three fields, `filename`, `type`, and `content-id`. The `filename` field is the name of the file (if it was provided). The `type` field is the [media type](http://en.wikipedia.org/wiki/Internet_media_type) of the file. \n```\nX is the total number of attachments. For example, if the number of attachments is 0, there will be no attachment files. If the number of attachments is 3, parameters attachment1, attachment2, and attachment3 will have file uploads. \n```\n"
+                  },
+                  "charsets": {
+                    "type": "string",
+                    "description": "A string containing the character sets of the fields extracted from the message."
+                  },
+                  "SPF": {
+                    "type": "string",
+                    "description": "The results of the Sender Policy Framework verification of the message sender and receiving IP address."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "msg": {
+                      "type": "string",
+                      "example": "OK"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mail": {
+      "get": {
+        "summary": "Get email list",
+        "description": "Returns a list of emails with basic pagination information",
+        "tags": [
+          "Email"
+        ],
+        "parameters": [
+          {
+            "name": "s",
+            "in": "query",
+            "description": "Search parameter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "Number of items per page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "subject": {
+                                "type": "string"
+                              },
+                              "from": {
+                                "type": "string"
+                              },
+                              "to": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "created_at": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "current": {
+                              "type": "integer"
+                            },
+                            "lastPage": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "current",
+                            "lastPage",
+                            "total"
+                          ]
+                        }
+                      }
+                    },
+                    "error": {
+                      "type": "object"
+                    }
+                  },
+                  "example": {
+                    "status": true,
+                    "data": {
+                      "items": [
+                        {
+                          "id": 1,
+                          "subject": "example subject",
+                          "from": "example@example.com",
+                          "to": [
+                            "example@example.com"
+                          ],
+                          "date": "2023-11-24T10:49:33.000Z",
+                          "created_at": "2023-11-24T10:49:33.000Z"
+                        }
+                      ],
+                      "pagination": {
+                        "current": 1,
+                        "lastPage": 1,
+                        "total": 1
+                      }
+                    },
+                    "error": null
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mail/{id}": {
+      "get": {
+        "summary": "Get mail by ID",
+        "description": "Retrieve a mail object by its unique identifier.",
+        "tags": [
+          "Email"
+        ],
+        "operationId": "getMailById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of the mail to retrieve",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "boolean",
+                      "description": "Whether the request was successful or not."
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "description": "Unique identifier for the mail."
+                        },
+                        "subject": {
+                          "type": "string",
+                          "description": "Subject of the mail."
+                        },
+                        "html": {
+                          "type": "string",
+                          "description": "HTML content of the mail."
+                        },
+                        "date": {
+                          "type": "string",
+                          "description": "Date the mail was sent."
+                        },
+                        "from": {
+                          "type": "string",
+                          "description": "Sender of the mail."
+                        },
+                        "to": {
+                          "type": "string",
+                          "description": "Recipient of the mail."
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "description": "Date and time the mail was created."
+                        },
+                        "attachments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "description": "Unique identifier for the attachment."
+                              },
+                              "filename": {
+                                "type": "string",
+                                "description": "Name of the attachment file."
+                              },
+                              "content_id": {
+                                "type": "string",
+                                "description": "Content ID of the attachment."
+                              },
+                              "mime_type": {
+                                "type": "string",
+                                "description": "MIME type of the attachment."
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "description": "Date and time the attachment was created."
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "error": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attachment/{id}": {
+      "get": {
+        "summary": "Download attachment by ID",
+        "description": "Retrieve an attachment object by its unique identifier.",
+        "tags": [
+          "Email"
+        ],
+        "operationId": "getAttachmentById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of the attachment to retrieve",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

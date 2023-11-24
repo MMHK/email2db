@@ -7,20 +7,16 @@ import (
 )
 
 func loadHTTPConfig() (*Config) {
-	return &Config{
+	conf := &Config{
 		HttpConfig: HttpConfig{
 			Listen: os.Getenv("HTTP_LIST"),
 			WebRoot: os.Getenv("WEB_ROOT"),
 		},
-		Storage: &StorageConfig{
-			S3: loadS3Config(),
-		},
-		DB: &DBConfig{
-			MySQL: &MySQLConfig{
-				DSN: loadMySQLDSN(),
-			},
-		},
 	}
+
+	conf.MarginWithENV()
+
+	return conf
 }
 
 func TestHTTPService_Start(t *testing.T) {

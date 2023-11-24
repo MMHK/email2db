@@ -26,6 +26,7 @@ type IStorage interface {
 	Upload(localPath string, Key string, opt *UploadOptions) (string, string, error)
 	PutContent(content string, Key string, opt *UploadOptions) (string, string, error)
 	PutStream(reader io.Reader, Key string, opt *UploadOptions) (string, string, error)
+	GetDownloadLink(Key string) (string, error)
 }
 
 func GetStorage(conf *StorageConfig) (IStorage, error) {

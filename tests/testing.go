@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/joho/godotenv"
 	"github.com/op/go-logging"
 	"path/filepath"
@@ -25,4 +27,15 @@ func init()  {
 func GetLocalPath(file string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(filename), file)
+}
+
+func ToJSON(target interface{}) (string) {
+	jsonBin, err := json.Marshal(target)
+	if err != nil {
+		return err.Error()
+	}
+
+	var str bytes.Buffer
+	_ = json.Indent(&str, jsonBin, "", "  ")
+	return str.String()
 }

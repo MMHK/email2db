@@ -286,3 +286,62 @@ Confidential \\ Non Personal Data`,
 	t.Log(ID)
 	t.Log("PASS")
 }
+
+func TestDBHelper_GetMailDetail(t *testing.T) {
+	dsn := loadMySQLDSN()
+
+	t.Log(dsn)
+
+	helper, err := GetDBHelper(&DBConfig{
+		&MySQLConfig{
+			DSN: dsn,
+		},
+	})
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+		return
+	}
+
+	target := APIEmailDetail{}
+
+	err = helper.GetMailDetail(&target, 13)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+		return
+	}
+
+	t.Logf(tests.ToJSON(target))
+	t.Log("PASS")
+}
+
+func TestDBHelper_GetMailList(t *testing.T) {
+	dsn := loadMySQLDSN()
+
+	t.Log(dsn)
+
+	helper, err := GetDBHelper(&DBConfig{
+		&MySQLConfig{
+			DSN: dsn,
+		},
+	})
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+		return
+	}
+
+	list := []APIEmailListItem{}
+
+	pager, err := helper.GetMailList(&list, "", 5, 2)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+		return
+	}
+
+	t.Logf(tests.ToJSON(list))
+	t.Logf(tests.ToJSON(pager))
+	t.Log("PASS")
+}

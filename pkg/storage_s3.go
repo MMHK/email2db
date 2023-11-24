@@ -4,12 +4,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"io"
 	"mime"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type S3Storage struct {
@@ -109,4 +111,14 @@ func (this *S3Storage) PutStream(reader io.Reader, Key string, opt *UploadOption
 	}
 
 	return path, info.Location, err
+}
+
+func (this *S3Storage) GetDownloadLink(Key string) (string, error) {
+	svc := s3.New(this.session)
+
+	req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: aws.String(this.Conf.Bucket),
+		Key:    aws.String(Key),
+	})
+	return req.Presign(30 * time.Minute)
 }
