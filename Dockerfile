@@ -33,6 +33,7 @@ WORKDIR /app
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/email2db .
 COPY ./config.json .
+COPY ./web /app/web
 
 ENV HTTP_LIST="0.0.0.0:8843" \
  S3_KEY="" \
@@ -47,7 +48,7 @@ ENV HTTP_LIST="0.0.0.0:8843" \
  MYSQL_USERNAME="" \
  MYSQL_PASSWORD="" \
  TZ="Asia/Hong_Kong" \
- WEB_ROOT=/var/www/email2db
+ WEB_ROOT=/app/web
 
 EXPOSE 8843
 
