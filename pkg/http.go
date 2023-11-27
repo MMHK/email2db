@@ -175,7 +175,7 @@ func (this *HTTPService) parseSendGridWebhook(writer http.ResponseWriter, reques
 func (this *HTTPService) getEmailList(writer http.ResponseWriter, request *http.Request) {
 	params := GetParamsInQuery(request)
 	pageSize := params.GetUint("pageSize", 10)
-	page := params.GetUint("pageSize", 10)
+	page := params.GetUint("page", 10)
 	search := params.GetString("s", "")
 
 	db, err := GetDBHelper(this.conf.DB)
@@ -280,8 +280,8 @@ func (s *HTTPService) Start() {
 	rHandler.HandleFunc("/api/mail/{id}", s.getEmailDetail)
 	rHandler.HandleFunc("/api/attachment/{id}", s.downloadAttachment)
 	rHandler.HandleFunc("/webhook/sendgrid", s.parseSendGridWebhook)
-	rHandler.PathPrefix("/swagger/").Handler(http.StripPrefix("/swagger/",
-		http.FileServer(http.Dir(fmt.Sprintf("%s/swagger", s.conf.WebRoot)))))
+	rHandler.PathPrefix("/").Handler(http.StripPrefix("/",
+		http.FileServer(http.Dir(fmt.Sprintf("%s", s.conf.WebRoot)))))
 	rHandler.NotFoundHandler = http.HandlerFunc(s.NotFoundHandle)
 
 	Log.Info("http service starting")
