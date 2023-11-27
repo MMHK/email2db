@@ -136,6 +136,7 @@ type IDBHelper interface {
 	GetMailList(list interface{}, search string, pageSize uint, currentPage uint) (*Pagination, error)
 	GetMailDetail(target IMailDetail, MailID int) (error)
 	GetAttachment(id int) (*AttachmentModel, error)
+	Close() (error)
 }
 
 type DBHelper struct {
@@ -229,4 +230,12 @@ func (this *DBHelper) GetAttachment(id int) (*AttachmentModel, error) {
 		return nil, err
 	}
 	return &target, nil
+}
+
+func (this *DBHelper) Close() error {
+	db, err := this.connection.DB()
+	if err != nil {
+		return err
+	}
+	return db.Close()
 }

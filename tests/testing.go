@@ -30,12 +30,14 @@ func GetLocalPath(file string) string {
 }
 
 func ToJSON(target interface{}) (string) {
-	jsonBin, err := json.Marshal(target)
+	str := new(bytes.Buffer)
+	encoder := json.NewEncoder(str)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "    ")
+	err := encoder.Encode(target)
 	if err != nil {
 		return err.Error()
 	}
 
-	var str bytes.Buffer
-	_ = json.Indent(&str, jsonBin, "", "  ")
 	return str.String()
 }

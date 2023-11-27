@@ -116,6 +116,8 @@ func (this *HTTPService) parseSendGridWebhook(writer http.ResponseWriter, reques
 				Log.Error(err)
 				return
 			}
+			defer db.Close()
+
 			Log.Debug("start save mail to DB")
 			mail_id, err := db.SaveMail(&MailModel{
 				Subject: sendgrid.GetSubject(),
@@ -184,6 +186,8 @@ func (this *HTTPService) getEmailList(writer http.ResponseWriter, request *http.
 		this.ResponseError(err, writer)
 		return
 	}
+	defer db.Close()
+
 	list := []APIEmailListItem{}
 	pager, err := db.GetMailList(&list, search, pageSize, page)
 	if err != nil {
@@ -222,6 +226,7 @@ func (this *HTTPService) getEmailDetail(writer http.ResponseWriter, request *htt
 		this.ResponseError(err, writer)
 		return
 	}
+	defer db.Close()
 
 	result := APIEmailDetail{}
 	err = db.GetMailDetail(&result, mail_id)
@@ -256,6 +261,7 @@ func (this *HTTPService) downloadAttachment(writer http.ResponseWriter, request 
 		this.ResponseError(err, writer)
 		return
 	}
+	defer db.Close()
 
 	attachment, err := db.GetAttachment(attachment_id)
 	if err != nil {
@@ -301,12 +307,14 @@ func (s *HTTPService) Start() {
 }
 
 func (s *HTTPService) ResponseJSON(source interface{}, writer http.ResponseWriter) {
-	json_str, err := json.Marshal(source)
+	encoder := json.NewEncoder(writer)
+	encoder.SetEscapeHTML(false)
+
+	writer.Header().Set("Content-Type", "application/json")
+	err := encoder.Encode(source)
 	if err != nil {
 		s.ResponseError(err, writer)
 	}
-	writer.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(writer, string(json_str))
 }
 
 func (s *HTTPService) NotFoundHandle(writer http.ResponseWriter, request *http.Request) {

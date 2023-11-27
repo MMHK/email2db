@@ -305,7 +305,7 @@ func TestDBHelper_GetMailDetail(t *testing.T) {
 
 	target := APIEmailDetail{}
 
-	err = helper.GetMailDetail(&target, 13)
+	err = helper.GetMailDetail(&target, 16)
 	if err != nil {
 		t.Error(err)
 		t.Fail()
@@ -314,6 +314,8 @@ func TestDBHelper_GetMailDetail(t *testing.T) {
 
 	target.FillDate()
 	target.FillHTML()
+
+	t.Log(target.HTML)
 
 	t.Logf(tests.ToJSON(target))
 	t.Log("PASS")
