@@ -192,6 +192,11 @@ func (this *HTTPService) getEmailList(writer http.ResponseWriter, request *http.
 		return
 	}
 
+	for i, _ := range list {
+		t := &list[i]
+		t.FillDate()
+	}
+
 	this.ResponseJSON(&APIListResponse{
 		APIStandardError: APIStandardError{
 			Status: true,
@@ -225,6 +230,9 @@ func (this *HTTPService) getEmailDetail(writer http.ResponseWriter, request *htt
 		this.ResponseError(err, writer)
 		return
 	}
+
+	result.FillDate()
+	result.FillHTML()
 
 	this.ResponseJSON(&APIEmailDetailResponse{
 		APIStandardError: APIStandardError{

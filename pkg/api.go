@@ -1,24 +1,39 @@
 package pkg
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/mail"
 	"strings"
 	"time"
 )
 
-type APIEmailListItem struct {
-	ID        int               `json:"id"`
-	Subject   string            `json:"subject" gorm:"column:subject"`
-	From      string            `json:"from" gorm:"column:from"`
-	To        ToList            `json:"to" gorm:"column:to;type:json"`
-	meta      map[string]string `gorm:"column:meta"`
-	CreatedAt string            `json:"created_at" gorm:"column:created_at"`
+type MateData map[string]string
+
+func (this *MateData) Scan(value interface{}) error {
+	bin, ok := value.([]byte)
+	if !ok {
+		this = &MateData{}
+		return nil
+	}
+	return json.Unmarshal(bin, this)
 }
 
-func (this *APIEmailListItem) Date() time.Time {
-	headers, ok := this.meta["headers"]
+type APIEmailListItem struct {
+	ID        int      `json:"id"`
+	Subject   string   `json:"subject" gorm:"column:subject"`
+	From      string   `json:"from" gorm:"column:from"`
+	To        ToList   `json:"to" gorm:"column:to;type:json"`
+	Meta      MateData `gorm:"column:meta;type:json" json:"-"`
+	Date      string   `json:"date" gorm:"-"`
+	CreatedAt string   `json:"created_at" gorm:"column:created_at"`
+}
+
+func (this *APIEmailListItem) FillDate() {
+	headers, ok := this.Meta["headers"]
+	layout := "2006-01-02T15:04:05-07:00"
 	if ok {
-		message, err := mail.ReadMessage(strings.NewReader(headers))
+		message, err := mail.ReadMessage(strings.NewReader(fmt.Sprintf("%s\n", headers)))
 		if err != nil {
 			Log.Error(err)
 		} else {
@@ -27,15 +42,17 @@ func (this *APIEmailListItem) Date() time.Time {
 			if err != nil {
 				Log.Error(err)
 			} else {
-				return date
+				this.Date = date.Format(layout)
+				return
 			}
 		}
 	}
-	return time.Now()
+	this.Date = time.Now().Format(layout)
 }
 
 type APIEmailDetail struct {
 	APIEmailListItem
+	HTML        string            `json:"html"`
 	Attachments []AttachmentModel `json:"attachments" gorm:"foreignKey:EmailID;references:ID"`
 }
 
@@ -47,16 +64,15 @@ func (this *APIEmailDetail) GetAttachments() *[]AttachmentModel {
 	return &this.Attachments
 }
 
-func (this *APIEmailDetail) HTML() string {
-	html, ok := this.meta["html"]
+func (this *APIEmailDetail) FillHTML() {
+	html, ok := this.Meta["html"]
 	if ok {
-		return html
+		this.HTML = html
 	}
-	return ""
 }
 
 type APIListWrapper struct {
-	Items      []APIEmailListItem `json:"items"`
+	Items      []APIEmailListItem `json:"items" gorm:"-"`
 	Pagination Pagination         `json:"pagination"`
 }
 

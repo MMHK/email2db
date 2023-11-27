@@ -312,6 +312,9 @@ func TestDBHelper_GetMailDetail(t *testing.T) {
 		return
 	}
 
+	target.FillDate()
+	target.FillHTML()
+
 	t.Logf(tests.ToJSON(target))
 	t.Log("PASS")
 }
@@ -341,7 +344,12 @@ func TestDBHelper_GetMailList(t *testing.T) {
 		return
 	}
 
-	t.Logf(tests.ToJSON(list))
+	for i, _ := range list {
+		t := &list[i]
+		t.FillDate()
+	}
+
+	t.Logf(tests.ToJSON(&list))
 	t.Logf(tests.ToJSON(pager))
 	t.Log("PASS")
 }

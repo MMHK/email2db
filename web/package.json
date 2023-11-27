@@ -1,0 +1,32 @@
+{
+  "name": "email2db-webui",
+  "description": "Web UI for Email2DB",
+  "packageManager": "yarn@3.6.4",
+  "scripts": {
+    "build": "cross-env NODE_ENV=production webpack",
+    "serve": "cross-env NODE_ENV=development webpack-dev-server"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "cross-env": "^7.0.3",
+    "css-loader": "^6.8.1",
+    "css-minimizer-webpack-plugin": "^5.0.1",
+    "html-webpack-plugin": "^5.5.3",
+    "mini-css-extract-plugin": "^2.7.6",
+    "postcss-loader": "^7.3.3",
+    "sass-loader": "^13.3.2",
+    "style-loader": "^3.3.3",
+    "terser-webpack-plugin": "^5.3.9",
+    "vue-loader": "^15",
+    "vue-template-compiler": "^2.7.15",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  },
+  "dependencies": {
+    "@mdi/font": "^7.3.67",
+    "axios": "^1.6.2",
+    "buefy": "^0.9.25",
+    "vue": "2"
+  }
+}

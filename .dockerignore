@@ -5,5 +5,10 @@ tests/swagger
 tests/*.exe
 tests/*.ini
 tests/*.jpeg
+web/node_modules
+web/src
+web/.*
+web/*.lock
+web/webpack*
 *.md
 .env
