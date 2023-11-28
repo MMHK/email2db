@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"golang.org/x/net/html/charset"
 	"io/ioutil"
+	"mime"
 	"net/http"
 	"net/mail"
+	"path/filepath"
 	"strings"
 )
 
@@ -255,9 +257,12 @@ func (s *SendGridParser) parseEmbed() {
 		if err == nil && result != nil && len(result.Embeds) > 0 {
 			for _, embed := range result.Embeds {
 
+				mimeType := "application/octet-stream"
+				mimeType = mime.TypeByExtension(filepath.Ext(embed.Name))
+
 				s.attachments = append(s.attachments, &AttachmentRaw{
 					FileName:  embed.Name,
-					MimeType:  "application/octet-stream",
+					MimeType:  mimeType,
 					File:      ioutil.NopCloser(embed.Data),
 					ContentID: "",
 				})

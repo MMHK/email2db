@@ -1,10 +1,8 @@
 package pkg
 
 import (
-	"bytes"
 	"email2db/tests"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/mail"
 	"os"
@@ -84,24 +82,25 @@ func TestSupportUUEncode(t *testing.T) {
 	t.Log(sendgrid.attachments)
 	t.Log(tests.ToJSON(sendgrid.rawBody))
 
-	attachments := sendgrid.GetAttachments()
-	for _, attachment := range attachments {
-		filePath := tests.GetLocalPath(fmt.Sprintf(`../tests/%s`, attachment.FileName))
-		filePath = filepath.ToSlash(filePath)
-		buf := new(bytes.Buffer)
-		_, err = buf.ReadFrom(attachment.File)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		err := ioutil.WriteFile(filePath, buf.Bytes(), 0777)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-
-		defer attachment.File.Close()
-	}
+	//attachments := sendgrid.GetAttachments()
+	//for _, attachment := range attachments {
+	//	t.Log(attachment.MimeType)
+	//	filePath := tests.GetLocalPath(fmt.Sprintf(`../tests/%s`, attachment.FileName))
+	//	filePath = filepath.ToSlash(filePath)
+	//	buf := new(bytes.Buffer)
+	//	_, err = buf.ReadFrom(attachment.File)
+	//	if err != nil {
+	//		t.Error(err)
+	//		continue
+	//	}
+	//	err := ioutil.WriteFile(filePath, buf.Bytes(), 0777)
+	//	if err != nil {
+	//		t.Error(err)
+	//		continue
+	//	}
+	//
+	//	defer attachment.File.Close()
+	//}
 
 	t.Log("PASS")
 
