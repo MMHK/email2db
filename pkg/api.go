@@ -68,11 +68,10 @@ func (this *APIEmailDetail) FillHTML() {
 	html, ok := this.Meta["html"]
 	if ok {
 		this.HTML = html
-		if len(html) <= 0 {
-			text, ok := this.Meta["text"]
-			if ok {
-				this.HTML = strings.ReplaceAll("\n", "<br>\n", text)
-			}
+	} else {
+		text, ok := this.Meta["text"]
+		if ok {
+			this.HTML = strings.ReplaceAll(text, "\n", "<br>\n")
 		}
 	}
 }
