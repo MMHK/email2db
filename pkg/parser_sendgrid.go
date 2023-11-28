@@ -64,6 +64,7 @@ func (s *SendGridParser) Parse(request *http.Request) (IParser, error) {
 	s.parseMeta()
 	s.parseContacts()
 	s.parseAttachments(request)
+	s.parseEmbed()
 
 	return s, nil
 }
@@ -243,6 +244,29 @@ func (s *SendGridParser) parseAttachments(request *http.Request) {
 				File:      reader,
 				ContentID: contentID,
 			})
+		}
+	}
+}
+
+func (s *SendGridParser) parseEmbed() {
+	text, ok:= s.rawBody["text"]
+	if ok && len(text) > 0 {
+		result, err := ParseUUEncode(text)
+		if err == nil && result != nil && len(result.Embeds) > 0 {
+			for _, embed := range result.Embeds {
+
+				s.attachments = append(s.attachments, &AttachmentRaw{
+					FileName:  embed.Name,
+					MimeType:  "application/octet-stream",
+					File:      ioutil.NopCloser(embed.Data),
+					ContentID: "",
+				})
+			}
+
+			s.rawBody["text"] = result.SplitBody
+		}
+		if err != nil {
+			Log.Error(err)
 		}
 	}
 }
