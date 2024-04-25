@@ -8,6 +8,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 	"net/url"
 	"os"
 	"time"
@@ -137,6 +138,7 @@ type IDBHelper interface {
 	GetMailDetail(target IMailDetail, MailID int) (error)
 	GetAttachment(id int) (*AttachmentModel, error)
 	Close() (error)
+	Exist(*MailModel) bool
 }
 
 type DBHelper struct {
@@ -149,7 +151,7 @@ func GetDBHelper(config *DBConfig) (IDBHelper, error) {
 			DSN:                       config.MySQL.DSN,
 			SkipInitializeWithVersion: false,
 		}), &gorm.Config{
-			//Logger: logger.Default.LogMode(logger.Info),
+			Logger: logger.Default.LogMode(logger.Info),
 		})
 		if err != nil {
 			return nil, err
@@ -238,4 +240,21 @@ func (this *DBHelper) Close() error {
 		return err
 	}
 	return db.Close()
+}
+
+func (this *DBHelper) Exist(target *MailModel) bool {
+	MessageID, ok := target.Meta["MessageID"]
+	if !ok {
+		MessageID = ""
+	}
+	result := this.connection.Raw("select * from `em_email` where (`subject` =? AND `from` =?) OR `meta`->>'$.MessageID' = ?",
+		target.Subject, target.From, MessageID)
+
+	rows, err := result.Rows()
+	if err == nil {
+		return rows.Next()
+	}
+	Log.Error(err)
+
+	return false
 }

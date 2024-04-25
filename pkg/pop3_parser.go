@@ -108,6 +108,16 @@ func NewPop3ParserFromRaw(reader io.Reader) (*Pop3Parser, error) {
 	s.contacts.CC = eml.Cc
 	s.rawBody["cc"] = ccList
 
+	replyList := ""
+	for i, addr := range eml.ReplyTo {
+		if i == 0 {
+			replyList = addr.Address
+			continue
+		}
+		replyList = fmt.Sprintf("%s,%s", replyList, addr.Address)
+	}
+	s.rawBody["ReplyTo"] = replyList
+
 	s.rawBody["text"] = eml.TextBody
 	s.rawBody["html"] = eml.HTMLBody
 
@@ -228,6 +238,32 @@ func (this *Pop3Reader) StartConnection(callback func(conn *pop3.Conn)error) err
 
 func (this *Pop3Reader) GetCounter(conn *pop3.Conn) (int, int, error) {
 	return conn.Stat()
+}
+
+func (this *Pop3Reader) EachMail(conn *pop3.Conn, limit int, callback func(parser *Pop3Parser)) error {
+	maiList, err := conn.List(0)
+	if err != nil {
+		return err
+	}
+
+	total := len(maiList)
+	end := total - limit
+	if end < 0 {
+		end = 0
+	}
+	for i := total - 1; i >= end; i-- {
+		msgID := maiList[i]
+		buf, err := conn.RetrRaw(msgID.ID)
+
+		parser, err := NewPop3ParserFromRaw(buf)
+		if err != nil {
+			Log.Error(err)
+			continue
+		}
+		callback(parser)
+	}
+
+	return nil
 }
 
 func (this *Pop3Reader) PullMailList(conn *pop3.Conn, limit int) ([]*Pop3Parser, error) {
