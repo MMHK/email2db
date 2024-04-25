@@ -58,8 +58,24 @@ func TestPop3Reader_PullMailList(t *testing.T) {
 		}
 
 		for _, mail := range list {
-			t.Logf("%+v", mail.GetMate())
-			t.Logf("%+v", mail.GetAttachments())
+			//meta := mail.GetMate()
+			//MessageID, ok := meta["MessageID"];
+			//if !ok {
+			//	MessageID = MakeUUID()
+			//}
+			//html, ok := meta["html"]
+			//if ok {
+			//	t.Log(html)
+			//}
+
+			t.Log("-------Subject-------");
+			t.Logf("%+v", mail.GetSubject())
+			t.Log("-------Subject-------");
+			t.Log("-------Attachments-------");
+			for _, file := range mail.GetAttachments() {
+				t.Logf("%s, type: %s", file.FileName, file.MimeType)
+			}
+			t.Log("-------Attachments-------");
 		}
 
 		return nil

@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"bufio"
+	"encoding/base64"
 	"fmt"
 	"github.com/DusanKasan/parsemail"
 	"github.com/knadh/go-pop3"
@@ -9,6 +11,7 @@ import (
 	"net/http"
 	"net/mail"
 	"path/filepath"
+	"strings"
 )
 
 type IPop3Config interface {
@@ -107,6 +110,27 @@ func NewPop3ParserFromRaw(reader io.Reader) (*Pop3Parser, error) {
 
 	s.rawBody["text"] = eml.TextBody
 	s.rawBody["html"] = eml.HTMLBody
+
+	r := bufio.NewReader(strings.NewReader(eml.TextBody))
+	line, _ := r.ReadString('\n')
+	// 檢查是否 base64 編碼的body
+	if len(line) == 78 {
+		rawBody, err := base64.StdEncoding.DecodeString(eml.TextBody)
+		if err == nil {
+			s.rawBody["text"] = string(rawBody)
+		}
+	}
+
+	r = bufio.NewReader(strings.NewReader(eml.HTMLBody))
+	line, _ = r.ReadString('\n')
+	// 檢查是否 base64 編碼的body
+	if len(line) == 78 {
+		rawBody, err := base64.StdEncoding.DecodeString(eml.HTMLBody)
+		if err == nil {
+			s.rawBody["html"] = string(rawBody)
+		}
+	}
+
 
 	s.rawBody["MessageID"] = eml.MessageID
 
