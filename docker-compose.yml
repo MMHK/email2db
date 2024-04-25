@@ -17,5 +17,10 @@ services:
       - TZ=Asia/Hong_Kong
       - HTTP_LIST=127.0.0.1:8843
       - WEB_ROOT=/app/email2db
+      - ZOHO_POP3_HOST=
+      - ZOHO_POP3_PORT=995
+      - ZOHO_EMAIL=
+      - ZOHO_APP_SECRET=
+      - ZOHO_POP3_TLS=true
     ports:
       - "8843:8843"
