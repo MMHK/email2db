@@ -436,7 +436,7 @@ func StartCheckerWorker(conf *Config, sleepTime time.Duration, ctx context.Conte
 			fmt.Println("Worker exiting.")
 			return
 		default:
-			RunPop3Checker(15, conf.Pop3Config, conf.DB, conf.Storage)
+			RunPop3Checker(25, conf.Pop3Config, conf.DB, conf.Storage)
 			time.Sleep(sleepTime)
 		}
 	}

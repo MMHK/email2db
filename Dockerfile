@@ -47,6 +47,12 @@ ENV HTTP_LIST="0.0.0.0:8843" \
  MYSQL_DATABASE="email2db" \
  MYSQL_USERNAME="" \
  MYSQL_PASSWORD="" \
+ PARSER_TYPE="pop3" \
+ ZOHO_POP3_HOST="" \
+ ZOHO_POP3_PORT=995 \
+ ZOHO_EMAIL="" \
+ ZOHO_APP_SECRET="" \
+ ZOHO_POP3_TLS=true \
  TZ="Asia/Hong_Kong" \
  WEB_ROOT=/app/web
 

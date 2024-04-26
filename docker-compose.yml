@@ -4,23 +4,24 @@ services:
     image: "mmhk/email2db:latest"
     restart: always
     environment:
-      - S3_KEY=
-      - S3_SECRET=
+      - S3_KEY=${S3_KEY}
+      - S3_SECRET=${S3_SECRET}
       - S3_REGION=ap-southeast-1
       - S3_BUCKET=s3.test.mixmedia.com
       - S3_PREFIX=email2db
-      - MYSQL_HOST=
+      - MYSQL_HOST=${MYSQL_HOST}
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=email2db
-      - MYSQL_USERNAME=
-      - MYSQL_PASSWORD=
+      - MYSQL_USERNAME=${MYSQL_USERNAME}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - TZ=Asia/Hong_Kong
-      - HTTP_LIST=127.0.0.1:8843
-      - WEB_ROOT=/app/email2db
-      - ZOHO_POP3_HOST=
+      - HTTP_LIST=0.0.0.0:8843
+      - WEB_ROOT=/app/web
+      - ZOHO_POP3_HOST=${ZOHO_POP3_HOST}
+      - PARSER_TYPE=${PARSER_TYPE}
       - ZOHO_POP3_PORT=995
-      - ZOHO_EMAIL=
-      - ZOHO_APP_SECRET=
+      - ZOHO_EMAIL=${ZOHO_EMAIL}
+      - ZOHO_APP_SECRET=${ZOHO_APP_SECRET}
       - ZOHO_POP3_TLS=true
     ports:
       - "8843:8843"
