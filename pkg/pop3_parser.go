@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bufio"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"github.com/DusanKasan/parsemail"
@@ -10,8 +11,11 @@ import (
 	"mime"
 	"net/http"
 	"net/mail"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type IPop3Config interface {
@@ -28,6 +32,25 @@ type ZohoPopConfig struct {
 	Port      int    `json:"port"`
 	AppSecret string `json:"app_secret"`
 	TLS       bool   `json:"tls"`
+}
+
+func LoadPop3ConfigWithEnv() IPop3Config {
+	intVal, err := strconv.Atoi(os.Getenv("ZOHO_POP3_PORT"))
+	if err != nil {
+		intVal = 995
+	}
+	boolVal, err := strconv.ParseBool(os.Getenv("ZOHO_POP3_TLS"))
+	if err != nil {
+		boolVal = false
+	}
+
+	return &ZohoPopConfig{
+		Host:      os.Getenv("ZOHO_POP3_HOST"),
+		Email:     os.Getenv("ZOHO_EMAIL"),
+		Port:      intVal,
+		TLS:       boolVal,
+		AppSecret: os.Getenv("ZOHO_APP_SECRET"),
+	}
 }
 
 func (this *ZohoPopConfig) GetHost() string {
@@ -51,9 +74,10 @@ func (this *ZohoPopConfig) GetTLS() bool {
 }
 
 type Pop3Parser struct {
-	rawBody             map[string]string
-	contacts            *ContactList
-	attachments         []*AttachmentRaw
+	rawBody     map[string]string
+	contacts    *ContactList
+	attachments []*AttachmentRaw
+	Date        time.Time
 }
 
 func (s *Pop3Parser) Parse(request *http.Request) (IParser, error) {
@@ -62,8 +86,8 @@ func (s *Pop3Parser) Parse(request *http.Request) (IParser, error) {
 
 func NewPop3ParserFromRaw(reader io.Reader) (*Pop3Parser, error) {
 	s := &Pop3Parser{
-		rawBody: map[string]string{},
-		contacts: new(ContactList),
+		rawBody:     map[string]string{},
+		contacts:    new(ContactList),
 		attachments: []*AttachmentRaw{},
 	}
 
@@ -96,7 +120,6 @@ func NewPop3ParserFromRaw(reader io.Reader) (*Pop3Parser, error) {
 	s.contacts.To = eml.To
 	s.rawBody["to"] = toList
 
-
 	ccList := ""
 	for i, addr := range eml.Cc {
 		if i == 0 {
@@ -121,6 +144,8 @@ func NewPop3ParserFromRaw(reader io.Reader) (*Pop3Parser, error) {
 	s.rawBody["text"] = eml.TextBody
 	s.rawBody["html"] = eml.HTMLBody
 
+	s.Date = eml.Date
+
 	r := bufio.NewReader(strings.NewReader(eml.TextBody))
 	line, _ := r.ReadString('\n')
 	// 檢查是否 base64 編碼的body
@@ -141,28 +166,27 @@ func NewPop3ParserFromRaw(reader io.Reader) (*Pop3Parser, error) {
 		}
 	}
 
-
 	s.rawBody["MessageID"] = eml.MessageID
 
 	fileList := []*AttachmentRaw{}
 	for _, file := range eml.Attachments {
 		fileList = append(fileList, &AttachmentRaw{
-			FileName: file.Filename,
-			File: io.NopCloser(file.Data),
-			MimeType: file.ContentType,
+			FileName:  file.Filename,
+			File:      io.NopCloser(file.Data),
+			MimeType:  file.ContentType,
 			ContentID: "",
 		})
 	}
 	for _, file := range eml.EmbeddedFiles {
 		fileList = append(fileList, &AttachmentRaw{
-			FileName: file.CID,
-			File: io.NopCloser(file.Data),
-			MimeType: file.ContentType,
+			FileName:  file.CID,
+			File:      io.NopCloser(file.Data),
+			MimeType:  file.ContentType,
 			ContentID: file.CID,
 		})
 	}
 
-	result, err := ParseUUEncode( eml.TextBody)
+	result, err := ParseUUEncode(eml.TextBody)
 	if err == nil && result != nil && len(result.Embeds) > 0 {
 		for _, embed := range result.Embeds {
 
@@ -210,6 +234,10 @@ func (s *Pop3Parser) GetFrom() string {
 	return s.rawBody["from"]
 }
 
+func (s *Pop3Parser) GetDate() time.Time {
+	return s.Date
+}
+
 func (s *Pop3Parser) GetAttachments() []*AttachmentRaw {
 	return s.attachments
 }
@@ -219,7 +247,7 @@ type Pop3Reader struct {
 	client *pop3.Client
 }
 
-func (this *Pop3Reader) StartConnection(callback func(conn *pop3.Conn)error) error {
+func (this *Pop3Reader) StartConnection(callback func(conn *pop3.Conn) error) error {
 	connection, err := this.client.NewConn()
 	if err != nil {
 		Log.Error(err)
@@ -310,5 +338,106 @@ func NewPop3Reader(config IPop3Config) *Pop3Reader {
 	return &Pop3Reader{
 		config: config,
 		client: client,
+	}
+}
+
+func RunPop3Checker(limit int, pop3Config IPop3Config, dbConfig *DBConfig, storageConf *StorageConfig) {
+	reader := NewPop3Reader(pop3Config)
+
+	Log.Debug("connect to pop3 server")
+	reader.StartConnection(func(conn *pop3.Conn) error {
+		defer Log.Debug("disconnect to pop3 server")
+
+		return reader.EachMail(conn, limit, func(parser *Pop3Parser) {
+			Log.Debug("pulling email from pop3 server")
+
+			mail_id := uint(0)
+			helper, err := GetDBHelper(dbConfig)
+			if err != nil {
+				Log.Error(err)
+				return
+			}
+			defer helper.Close()
+
+			meta := parser.GetMate()
+			ReplyTo, ok := meta["ReplyTo"]
+			if !ok || ReplyTo == "" {
+				ReplyTo = parser.GetFrom()
+			}
+
+			mail := &MailModel{
+				Subject: parser.GetSubject(),
+				From:    parser.GetFrom(),
+				To:      parser.GetToList(),
+				Meta:    meta,
+				ReplyTo: ReplyTo,
+				CreatedAt: parser.GetDate(),
+			}
+
+			if !helper.Exist(mail) {
+				Log.Debug("start save mail to DB")
+				mail_id, err = helper.SaveMail(mail)
+				if err != nil {
+					Log.Error(err)
+					return
+				}
+				Log.Debugf("Mail Save to DB, ID:%d", mail_id)
+			} else {
+				Log.Debug("mail already exist")
+			}
+
+			attachments := parser.GetAttachments()
+			if len(attachments) > 0 && mail_id > 0 {
+				Log.Debug("start upload attachments to S3")
+				storage, err := GetStorage(storageConf)
+				if err != nil {
+					Log.Error(err)
+					return
+				}
+
+				for _, attachment := range attachments {
+					distKey := fmt.Sprintf("%s%s", MakeUUID(), filepath.Ext(attachment.FileName))
+					Log.Debugf("uploading attachment[%s] to S3", attachment.FileName)
+					remotePath, _, err := storage.PutStream(attachment.File, distKey, &UploadOptions{
+						ContentType: attachment.MimeType,
+					})
+					defer attachment.File.Close()
+					if err != nil {
+						Log.Error(err)
+						continue
+					}
+					Log.Debugf("start save attachment[%s] to DB", attachment.FileName)
+					_, err = helper.SaveAttachment(&AttachmentModel{
+						Name:      attachment.FileName,
+						Path:      remotePath,
+						ContentID: attachment.ContentID,
+						EmailID:   mail_id,
+						MimeType:  attachment.MimeType,
+					})
+					if err != nil {
+						Log.Error(err)
+						continue
+					}
+				}
+			} else {
+				Log.Debug("no attachments or mail already exist")
+			}
+		})
+	})
+}
+
+
+func StartCheckerWorker(conf *Config, sleepTime time.Duration, ctx context.Context) {
+	Log.Info("Start Checker Worker")
+
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Worker exiting.")
+			return
+		default:
+			RunPop3Checker(15, conf.Pop3Config, conf.DB, conf.Storage)
+			time.Sleep(sleepTime)
+		}
 	}
 }

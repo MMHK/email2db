@@ -293,7 +293,9 @@ func (s *HTTPService) Start() {
 	rHandler.HandleFunc("/api/mail", s.getEmailList)
 	rHandler.HandleFunc("/api/mail/{id}", s.getEmailDetail)
 	rHandler.HandleFunc("/api/attachment/{id}", s.downloadAttachment)
-	rHandler.HandleFunc("/webhook/sendgrid", s.parseSendGridWebhook)
+	if s.conf.IsEnableSendGrid() {
+		rHandler.HandleFunc("/webhook/sendgrid", s.parseSendGridWebhook)
+	}
 	rHandler.PathPrefix("/").Handler(http.StripPrefix("/",
 		http.FileServer(http.Dir(fmt.Sprintf("%s", s.conf.WebRoot)))))
 	rHandler.NotFoundHandler = http.HandlerFunc(s.NotFoundHandle)

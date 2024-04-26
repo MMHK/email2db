@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"email2db/tests"
 	"github.com/knadh/go-pop3"
 	"os"
 	"strconv"
@@ -214,3 +215,19 @@ func TestPop3Parser_DBExist(t *testing.T) {
 
 	t.Log("PASS")
 }
+
+func TestRunPop3Checker(t *testing.T) {
+	conf, err := NewConfigFromLocal(tests.GetLocalPath("../config.json"))
+	if err != nil {
+		t.Error(err)
+
+		conf = &Config{}
+	}
+
+	conf.MarginWithENV()
+
+	RunPop3Checker(15, conf.Pop3Config, conf.DB, conf.Storage)
+
+	t.Log("PASS")
+}
+

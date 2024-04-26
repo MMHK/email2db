@@ -8,7 +8,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"gorm.io/gorm/logger"
 	"net/url"
 	"os"
 	"time"
@@ -151,7 +150,7 @@ func GetDBHelper(config *DBConfig) (IDBHelper, error) {
 			DSN:                       config.MySQL.DSN,
 			SkipInitializeWithVersion: false,
 		}), &gorm.Config{
-			Logger: logger.Default.LogMode(logger.Info),
+			//Logger: logger.Default.LogMode(logger.Info),
 		})
 		if err != nil {
 			return nil, err

@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"email2db/pkg"
 	"flag"
+	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -22,6 +27,20 @@ func main() {
 
 	pkg.Log.Debug("show config detail:")
 	pkg.Log.Debug(conf.ToJSON())
+
+	if conf.IsEnablePop3() {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		pkg.StartCheckerWorker(conf, 30 * time.Minute, ctx)
+
+		go func() {
+			<-sigs
+			cancel()
+		}()
+	}
 
 	service := pkg.NewHttpService(conf)
 	service.Start()

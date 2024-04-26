@@ -6,11 +6,16 @@ import (
 	"os"
 )
 
+const PARSER_TYPE_SENDGRID string = "sendgrid"
+const PARSER_TYPE_ZOHO_POP3 string = "pop3"
+
 type Config struct {
 	HttpConfig
-	Storage *StorageConfig `json:"storages"`
-	DB      *DBConfig      `json:"db"`
-	TempDir string         `json:"tmp_path"`
+	Pop3Config IPop3Config    `json:"pop3"`
+	ParserType string         `json:"parser"` // sendgrid | pop3
+	Storage    *StorageConfig `json:"storages"`
+	DB         *DBConfig      `json:"db"`
+	TempDir    string         `json:"tmp_path"`
 }
 
 func NewConfigFromLocal(filename string) (*Config, error) {
@@ -22,11 +27,26 @@ func NewConfigFromLocal(filename string) (*Config, error) {
 	return conf, err
 }
 
-func (this *Config) MarginWithENV()  {
+func (this *Config) IsEnableSendGrid() bool {
+	return this.ParserType == PARSER_TYPE_SENDGRID
+}
+
+func (this *Config) IsEnablePop3() bool {
+	return this.ParserType == PARSER_TYPE_ZOHO_POP3
+}
+
+func (this *Config) MarginWithENV() {
 	if this.Storage == nil || this.Storage.S3 == nil {
 		this.Storage = &StorageConfig{
 			S3: LoadS3ConfigWithEnv(),
 		}
+	}
+
+	if this.ParserType == "" {
+		this.ParserType = os.Getenv("PARSER_TYPE")
+	}
+	if this.ParserType == "" {
+		this.ParserType = PARSER_TYPE_SENDGRID
 	}
 
 	if this.DB == nil || this.DB.MySQL == nil || len(this.DB.MySQL.DSN) <= 0 {
@@ -41,6 +61,10 @@ func (this *Config) MarginWithENV()  {
 	}
 	if len(this.Listen) <= 0 {
 		this.Listen = os.Getenv("HTTP_LIST")
+	}
+
+	if this.IsEnablePop3() {
+		this.Pop3Config = LoadPop3ConfigWithEnv()
 	}
 }
 
