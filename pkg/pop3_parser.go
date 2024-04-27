@@ -344,6 +344,13 @@ func NewPop3Reader(config IPop3Config) *Pop3Reader {
 func RunPop3Checker(limit int, pop3Config IPop3Config, dbConfig *DBConfig, storageConf *StorageConfig) {
 	reader := NewPop3Reader(pop3Config)
 
+	helper, err := GetDBHelper(dbConfig)
+	if err != nil {
+		Log.Error(err)
+		return
+	}
+	defer helper.Close()
+
 	Log.Debug("connect to pop3 server")
 	reader.StartConnection(func(conn *pop3.Conn) error {
 		defer Log.Debug("disconnect to pop3 server")
@@ -352,12 +359,6 @@ func RunPop3Checker(limit int, pop3Config IPop3Config, dbConfig *DBConfig, stora
 			Log.Debug("pulling email from pop3 server")
 
 			mail_id := uint(0)
-			helper, err := GetDBHelper(dbConfig)
-			if err != nil {
-				Log.Error(err)
-				return
-			}
-			defer helper.Close()
 
 			meta := parser.GetMate()
 			ReplyTo, ok := meta["ReplyTo"]
@@ -424,6 +425,8 @@ func RunPop3Checker(limit int, pop3Config IPop3Config, dbConfig *DBConfig, stora
 			}
 		})
 	})
+
+	helper.Close()
 }
 
 
@@ -436,7 +439,7 @@ func StartCheckerWorker(conf *Config, sleepTime time.Duration, ctx context.Conte
 			fmt.Println("Worker exiting.")
 			return
 		default:
-			RunPop3Checker(25, conf.Pop3Config, conf.DB, conf.Storage)
+			RunPop3Checker(15, conf.Pop3Config, conf.DB, conf.Storage)
 			time.Sleep(sleepTime)
 		}
 	}

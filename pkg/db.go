@@ -246,14 +246,17 @@ func (this *DBHelper) Exist(target *MailModel) bool {
 	if !ok {
 		MessageID = ""
 	}
-	result := this.connection.Raw("select * from `em_email` where (`subject` =? AND `from` =?) OR `meta`->>'$.MessageID' = ?",
-		target.Subject, target.From, MessageID)
+	var counter int64
+	db := this.connection.Model(&MailModel{}).Where("(`subject` =? AND `from` =?) OR `meta`->>'$.MessageID' = ?",
+		target.Subject, target.From, MessageID).Count(&counter)
 
-	rows, err := result.Rows()
-	if err == nil {
-		return rows.Next()
+	if db.Error == nil && counter > 0 {
+		return true
 	}
-	Log.Error(err)
+
+	if db.Error != nil {
+		Log.Error(db.Error)
+	}
 
 	return false
 }

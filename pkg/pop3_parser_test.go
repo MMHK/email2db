@@ -247,9 +247,9 @@ func TestStartCheckerWorker(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go StartCheckerWorker(conf, 30 * time.Minute, ctx)
+	go StartCheckerWorker(conf, 10 * time.Second, ctx)
 
-	time.Sleep(20 *time.Second)
+	time.Sleep(20 *time.Minute)
 
 	cancel()
 
