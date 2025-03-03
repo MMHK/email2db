@@ -355,3 +355,31 @@ func TestDBHelper_GetMailList(t *testing.T) {
 	t.Logf(tests.ToJSON(pager))
 	t.Log("PASS")
 }
+
+func TestDBHelper_Exist(t *testing.T) {
+	dsn := loadMySQLDSN()
+	t.Log(dsn)
+	helper, err := GetDBHelper(&DBConfig{
+		&MySQLConfig{
+			DSN: dsn,
+		},
+	})
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+		return
+	}
+	testModel := &MailModel{
+		Subject: "",
+		ReplyTo: "",
+		Meta: map[string]string{
+			"MessageID": "202503021100.522B0gtH21561644@ hk.zurich.com",
+		},
+	}
+
+	if helper.Exist(testModel) {
+		t.Log("PASS")
+	} else {
+		t.Error("FAIL")
+	}
+}

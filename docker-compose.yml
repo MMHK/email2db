@@ -23,5 +23,13 @@ services:
       - ZOHO_EMAIL=${ZOHO_EMAIL}
       - ZOHO_APP_SECRET=${ZOHO_APP_SECRET}
       - ZOHO_POP3_TLS=true
+      - LOG_LEVEL=DEBUG
+      - CHECK_INTERVAL=1800
+      - FETCH_LIMIT=100
     ports:
       - "8843:8843"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

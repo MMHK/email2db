@@ -247,8 +247,13 @@ func (this *DBHelper) Exist(target *MailModel) bool {
 		MessageID = ""
 	}
 	var counter int64
-	db := this.connection.Model(&MailModel{}).Where("(`subject` =? AND `from` =?) OR `meta`->>'$.MessageID' = ?",
-		target.Subject, target.From, MessageID).Count(&counter)
+	var db *gorm.DB
+	if target.Subject == "" && target.From == "" {
+		db = this.connection.Model(&MailModel{}).Where("`meta`->>'$.MessageID' = ?", MessageID).Count(&counter)
+	} else {
+		db = this.connection.Model(&MailModel{}).Where("(`subject` =? AND `from` =?) OR `meta`->>'$.MessageID' = ?",
+			target.Subject, target.From, MessageID).Count(&counter)
+	}
 
 	if db.Error == nil && counter > 0 {
 		return true

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"strconv"
 )
 
 const PARSER_TYPE_SENDGRID string = "sendgrid"
@@ -11,11 +12,13 @@ const PARSER_TYPE_ZOHO_POP3 string = "pop3"
 
 type Config struct {
 	HttpConfig
-	Pop3Config IPop3Config    `json:"pop3"`
-	ParserType string         `json:"parser"` // sendgrid | pop3
-	Storage    *StorageConfig `json:"storages"`
-	DB         *DBConfig      `json:"db"`
-	TempDir    string         `json:"tmp_path"`
+	Pop3Config    IPop3Config    `json:"pop3"`
+	ParserType    string         `json:"parser"` // sendgrid | pop3
+	Storage       *StorageConfig `json:"storages"`
+	DB            *DBConfig      `json:"db"`
+	TempDir       string         `json:"tmp_path"`
+	CheckInterval int64          `json:"check_interval"` // seconds
+	FetchLimit    int            `json:"fetch_limit"`    // 0 means unlimited
 }
 
 func NewConfigFromLocal(filename string) (*Config, error) {
@@ -56,11 +59,30 @@ func (this *Config) MarginWithENV() {
 			},
 		}
 	}
-	if len(this.WebRoot) <= 0 {
+
+	if os.Getenv("HTTP_LIST") != "" {
+		this.Listen = os.Getenv("HTTP_LIST")
+	}
+	if os.Getenv("WEB_ROOT") != "" {
 		this.WebRoot = os.Getenv("WEB_ROOT")
 	}
-	if len(this.Listen) <= 0 {
-		this.Listen = os.Getenv("HTTP_LIST")
+
+	if os.Getenv("CHECK_INTERVAL") != "" {
+		if intval, err := strconv.Atoi("CHECK_INTERVAL"); err == nil {
+			this.CheckInterval = int64(intval)
+		}
+	}
+	if os.Getenv("FETCH_LIMIT") != "" {
+		if inval, err := strconv.Atoi("FETCH_LIMIT"); err == nil {
+			this.FetchLimit = inval
+		}
+	}
+
+	if this.CheckInterval <= 0 {
+		this.CheckInterval = 1800 // 30 minutes
+	}
+	if this.FetchLimit <= 0 {
+		this.FetchLimit = 100 // 100
 	}
 
 	if this.IsEnablePop3() {

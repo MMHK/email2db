@@ -74,26 +74,36 @@ func (this *ZohoPopConfig) GetTLS() bool {
 }
 
 type Pop3Parser struct {
-	rawBody     map[string]string
-	contacts    *ContactList
-	attachments []*AttachmentRaw
-	Date        time.Time
+	rawBody       map[string]string
+	contacts      *ContactList
+	attachments   []*AttachmentRaw
+	Date          time.Time
+	fetchCallback func() io.Reader
 }
 
 func (s *Pop3Parser) Parse(request *http.Request) (IParser, error) {
 	return s, nil
 }
 
-func NewPop3ParserFromRaw(reader io.Reader) (*Pop3Parser, error) {
+func NewPop3ParserFromRaw(fetcher func() io.Reader) (*Pop3Parser, error) {
 	s := &Pop3Parser{
 		rawBody:     map[string]string{},
 		contacts:    new(ContactList),
 		attachments: []*AttachmentRaw{},
+		fetchCallback: fetcher,
 	}
 
+	return s, nil
+}
+
+func (s *Pop3Parser) FetchAll() error  {
+	reader := s.fetchCallback()
+	if reader == nil {
+		return fmt.Errorf("Fetcher is nil")
+	}
 	eml, err := parsemail.Parse(reader)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	s.rawBody["subject"] = eml.Subject
 	fromList := ""
@@ -209,7 +219,7 @@ func NewPop3ParserFromRaw(reader io.Reader) (*Pop3Parser, error) {
 
 	s.attachments = fileList
 
-	return s, nil
+	return nil
 }
 
 func (s *Pop3Parser) GetSubject() string {
@@ -268,7 +278,7 @@ func (this *Pop3Reader) GetCounter(conn *pop3.Conn) (int, int, error) {
 	return conn.Stat()
 }
 
-func (this *Pop3Reader) EachMail(conn *pop3.Conn, limit int, callback func(parser *Pop3Parser)) error {
+func (this *Pop3Reader) EachMail(conn *pop3.Conn, limit int, callback func(parser *Pop3Parser, MessageID string)) error {
 	maiList, err := conn.List(0)
 	if err != nil {
 		return err
@@ -281,14 +291,23 @@ func (this *Pop3Reader) EachMail(conn *pop3.Conn, limit int, callback func(parse
 	}
 	for i := total - 1; i >= end; i-- {
 		msgID := maiList[i]
-		buf, err := conn.RetrRaw(msgID.ID)
-
-		parser, err := NewPop3ParserFromRaw(buf)
+		rawMsg, err := conn.Top(msgID.ID, 1)
 		if err != nil {
 			Log.Error(err)
 			continue
 		}
-		callback(parser)
+		//Log.Debugf("raw Message: %+v", rawMsg)
+
+		parser, err := NewPop3ParserFromRaw(func() io.Reader {
+			buf, err := conn.RetrRaw(msgID.ID)
+			if err != nil {
+				Log.Error(err)
+				return nil
+			}
+			return buf
+		})
+		msg_id := strings.Trim(rawMsg.Header.Get("Message-Id"), "<> ")
+		callback(parser, msg_id)
 	}
 
 	return nil
@@ -309,15 +328,16 @@ func (this *Pop3Reader) PullMailList(conn *pop3.Conn, limit int) ([]*Pop3Parser,
 
 	for i := total - 1; i >= end; i-- {
 		msgID := maiList[i]
-		buf, err := conn.RetrRaw(msgID.ID)
-		if err != nil {
-			Log.Error(err)
-			continue
-		}
-
 		//os.WriteFile(tests.GetLocalPath(fmt.Sprintf("../tests/%s.eml", MakeUUID())), buf.Bytes(), os.ModePerm)
 
-		parser, err := NewPop3ParserFromRaw(buf)
+		parser, err := NewPop3ParserFromRaw(func() io.Reader {
+			buf, err := conn.RetrRaw(msgID.ID)
+			if err != nil {
+				Log.Error(err)
+				return nil
+			}
+			return buf
+		})
 		if err != nil {
 			Log.Error(err)
 			continue
@@ -355,10 +375,31 @@ func RunPop3Checker(limit int, pop3Config IPop3Config, dbConfig *DBConfig, stora
 	reader.StartConnection(func(conn *pop3.Conn) error {
 		defer Log.Debug("disconnect to pop3 server")
 
-		return reader.EachMail(conn, limit, func(parser *Pop3Parser) {
+		return reader.EachMail(conn, limit, func(parser *Pop3Parser, msgID string) {
 			Log.Debug("pulling email from pop3 server")
 
 			mail_id := uint(0)
+
+			findMedel := &MailModel{
+				Subject: "",
+				ReplyTo: "",
+				Meta: 	 map[string]string{
+					"MessageID": msgID,
+				},
+			}
+			//Log.Debugf("raw Message: %+v\n", findMedel)
+			if helper.Exist(findMedel) {
+				Log.Debug("mail already exist")
+				return
+			} else {
+				Log.Debug("mail not exist")
+			}
+
+			err = parser.FetchAll()
+			if err != nil {
+				Log.Error(err)
+				return
+			}
 
 			meta := parser.GetMate()
 			ReplyTo, ok := meta["ReplyTo"]
@@ -366,7 +407,7 @@ func RunPop3Checker(limit int, pop3Config IPop3Config, dbConfig *DBConfig, stora
 				ReplyTo = parser.GetFrom()
 			}
 
-			mail := &MailModel{
+			dbMail := &MailModel{
 				Subject: parser.GetSubject(),
 				From:    parser.GetFrom(),
 				To:      parser.GetToList(),
@@ -375,17 +416,13 @@ func RunPop3Checker(limit int, pop3Config IPop3Config, dbConfig *DBConfig, stora
 				CreatedAt: parser.GetDate(),
 			}
 
-			if !helper.Exist(mail) {
-				Log.Debug("start save mail to DB")
-				mail_id, err = helper.SaveMail(mail)
-				if err != nil {
-					Log.Error(err)
-					return
-				}
-				Log.Debugf("Mail Save to DB, ID:%d", mail_id)
-			} else {
-				Log.Debug("mail already exist")
+			Log.Debug("start save mail to DB")
+			mail_id, err = helper.SaveMail(dbMail)
+			if err != nil {
+				Log.Error(err)
+				return
 			}
+			Log.Debugf("Mail Save to DB, ID:%d", mail_id)
 
 			attachments := parser.GetAttachments()
 			if len(attachments) > 0 && mail_id > 0 {
@@ -439,7 +476,7 @@ func StartCheckerWorker(conf *Config, sleepTime time.Duration, ctx context.Conte
 			fmt.Println("Worker exiting.")
 			return
 		default:
-			RunPop3Checker(15, conf.Pop3Config, conf.DB, conf.Storage)
+			RunPop3Checker(conf.FetchLimit, conf.Pop3Config, conf.DB, conf.Storage)
 			time.Sleep(sleepTime)
 		}
 	}

@@ -99,7 +99,14 @@ func TestPop3Parser_EachMail(t *testing.T) {
 	reader := NewPop3Reader(GetTestPop3Config())
 
 	err := reader.StartConnection(func(conn *pop3.Conn) error {
-		return reader.EachMail(conn, 40, func(parser *Pop3Parser) {
+		return reader.EachMail(conn, 40, func(parser *Pop3Parser, msgID string) {
+			t.Log("----Raw MessageID----")
+			t.Log(msgID)
+			err := parser.FetchAll()
+			if err != nil {
+				t.Error(err)
+				return
+			}
 			t.Log("-------Subject-------");
 			t.Logf("%+v", parser.GetSubject())
 			t.Log("-------Subject-------");
@@ -139,7 +146,12 @@ func TestPop3Parser_SaveToDB(t *testing.T) {
 	reader := NewPop3Reader(GetTestPop3Config())
 
 	err = reader.StartConnection(func(conn *pop3.Conn) error {
-		return reader.EachMail(conn, 1, func(parser *Pop3Parser) {
+		return reader.EachMail(conn, 1, func(parser *Pop3Parser, msgID string) {
+			err := parser.FetchAll()
+			if err != nil {
+				t.Error(err)
+				return
+			}
 			meta := parser.GetMate()
 			ReplyTo, ok := meta["ReplyTo"]
 			if !ok {
@@ -190,7 +202,12 @@ func TestPop3Parser_DBExist(t *testing.T) {
 	reader := NewPop3Reader(GetTestPop3Config())
 
 	err = reader.StartConnection(func(conn *pop3.Conn) error {
-		return reader.EachMail(conn, 1, func(parser *Pop3Parser) {
+		return reader.EachMail(conn, 1, func(parser *Pop3Parser, msgID string) {
+			err := parser.FetchAll()
+			if err != nil {
+				t.Error(err)
+				return
+			}
 			meta := parser.GetMate()
 			ReplyTo, ok := meta["ReplyTo"]
 			if !ok {
@@ -228,7 +245,7 @@ func TestRunPop3Checker(t *testing.T) {
 
 	conf.MarginWithENV()
 
-	RunPop3Checker(15, conf.Pop3Config, conf.DB, conf.Storage)
+	RunPop3Checker(conf.FetchLimit, conf.Pop3Config, conf.DB, conf.Storage)
 
 	t.Log("PASS")
 }

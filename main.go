@@ -34,7 +34,7 @@ func main() {
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		go pkg.StartCheckerWorker(conf, 30 * time.Minute, ctx)
+		go pkg.StartCheckerWorker(conf, time.Duration(conf.CheckInterval) * time.Second, ctx)
 
 		go func() {
 			<-sigs

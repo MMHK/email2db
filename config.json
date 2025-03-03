@@ -1,5 +1,1 @@
-{
-    "listen": "${HTTP_LIST}",
-    "web_root": "${WEB_ROOT}",
-    "tmp_path": "/tmp"
-}
+{}

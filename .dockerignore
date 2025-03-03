@@ -10,5 +10,6 @@ web/src
 web/.*
 web/*.lock
 web/webpack*
+web/.yarn
 *.md
 .env

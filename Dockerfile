@@ -18,7 +18,9 @@ RUN go version \
  && chmod +x email2db
 
 ######## Start a new stage from scratch #######
-FROM alpine:latest  
+FROM alpine:latest
+
+WORKDIR /app
 
 RUN wget -O /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 \
  && chmod +x /usr/local/bin/dumb-init \
@@ -26,13 +28,11 @@ RUN wget -O /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/
  && apk add --virtual build_deps gettext \
  && apk add --no-cache tzdata \
  && cp /usr/bin/envsubst /usr/local/bin/envsubst \
- && apk del build_deps
-
-WORKDIR /app
+ && apk del build_deps \
+ && echo "{}" > /app/config.json
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/email2db .
-COPY ./config.json .
 COPY ./web /app/web
 
 ENV HTTP_LIST="0.0.0.0:8843" \
@@ -54,6 +54,9 @@ ENV HTTP_LIST="0.0.0.0:8843" \
  ZOHO_APP_SECRET="" \
  ZOHO_POP3_TLS=true \
  TZ="Asia/Hong_Kong" \
+ CHECK_INTERVAL=10800 \
+ FETCH_LIMIT=100 \
+ LOG_LEVEL=INFO \
  WEB_ROOT=/app/web
 
 EXPOSE 8843

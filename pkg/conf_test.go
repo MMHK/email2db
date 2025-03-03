@@ -60,6 +60,7 @@ func Test_SaveConfig(t *testing.T) {
 			MySQL: &MySQLConfig{},
 		},
 	}
+	conf.MarginWithENV()
 	configPath := tests.GetLocalPath("../config.json")
 	err := conf.Save(configPath)
 	if err != nil {
